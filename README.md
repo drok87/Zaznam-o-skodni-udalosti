@@ -1,0 +1,1 @@
+# Zaznam-o-skodni-udalosti
