@@ -1066,9 +1066,358 @@
             }
         });
         
-        // Demo funkce pro odeslání (bez skutečného odesílání)
-        function submitForm() {
+        // Funkce pro sběr všech dat z formuláře
+        function collectFormData() {
+            // Získání hodnot ze všech polí
+            const formData = {
+                company: "Rohlik.cz",
+                reportTime: document.getElementById('auto-time').textContent,
+                incident: {
+                    date: document.getElementById('incident-date').value,
+                    time: document.getElementById('incident-time-input').value
+                },
+                reporter: {
+                    name: document.getElementById('reporter-name').value,
+                    position: document.getElementById('reporter-position').value,
+                    employeeId: document.getElementById('reporter-id').value,
+                    company: document.getElementById('reporter-company').value
+                },
+                perpetrator: {
+                    name: document.getElementById('perpetrator-name').value,
+                    position: document.getElementById('perpetrator-position').value,
+                    employeeId: document.getElementById('perpetrator-id').value,
+                    company: document.getElementById('perpetrator-company').value
+                },
+                location: {
+                    address: document.getElementById('location').value,
+                    detail: document.getElementById('location-detail').value
+                },
+                damage: {
+                    type: document.getElementById('damage-type').value,
+                    description: document.getElementById('damage-description').value
+                },
+                cause: {
+                    type: document.getElementById('cause-type').value,
+                    detail: document.getElementById('cause-detail').value
+                },
+                estimatedDamage: {
+                    amount: document.getElementById('estimated-damage').value,
+                    currency: document.getElementById('currency').value
+                },
+                perpetratorStatement: document.getElementById('perpetrator-statement').value,
+                signatures: {
+                    perpetrator: getSignatureData('signature-perpetrator'),
+                    supervisor: getSignatureData('signature-supervisor')
+                },
+                photos: getPhotosData(),
+                timestamp: new Date().toISOString(),
+                formId: generateFormId()
+            };
+
+            return formData;
+        }
+
+        // Funkce pro získání dat podpisu
+        function getSignatureData(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (canvas) {
+                return {
+                    dataUrl: canvas.toDataURL('image/png'),
+                    isEmpty: isCanvasEmpty(canvas)
+                };
+            }
+            return null;
+        }
+
+        // Kontrola zda je canvas prázdný
+        function isCanvasEmpty(canvas) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            return !imageData.data.some(channel => channel !== 0);
+        }
+
+        // Funkce pro získání fotografií
+        function getPhotosData() {
+            const photosInput = document.getElementById('photos');
+            const photos = [];
+            
+            if (photosInput.files.length > 0) {
+                for (let i = 0; i < photosInput.files.length; i++) {
+                    const file = photosInput.files[i];
+                    photos.push({
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        lastModified: file.lastModified
+                    });
+                }
+            }
+            
+            return photos;
+        }
+
+        // Generování unikátního ID formuláře
+        function generateFormId() {
+            return 'DAMAGE_' + new Date().getFullYear() + 
+                   ('0' + (new Date().getMonth() + 1)).slice(-2) + 
+                   ('0' + new Date().getDate()).slice(-2) + '_' +
+                   Math.random().toString(36).substr(2, 9).toUpperCase();
+        }
+
+        // Funkce pro generování skutečného PDF pomocí jsPDF
+        async function generatePDFData(formData) {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Nastavení fontu
+                doc.setFont("helvetica");
+                
+                // Hlavička
+                doc.setFillColor(0, 200, 81);
+                doc.rect(0, 0, 210, 30, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(20);
+                doc.text('🛡️ Záznam o škodní události', 105, 15, { align: 'center' });
+                doc.setFontSize(16);
+                doc.text('🥐 Rohlik.cz', 105, 25, { align: 'center' });
+                
+                // Reset barvy textu
+                doc.setTextColor(0, 0, 0);
+                let yPos = 45;
+                
+                // ID protokolu
+                doc.setFontSize(12);
+                doc.setFont("helvetica", "bold");
+                doc.text('ID protokolu:', 20, yPos);
+                doc.setFont("helvetica", "normal");
+                doc.text(formData.formId, 60, yPos);
+                yPos += 10;
+                
+                // Čas oznámení
+                doc.setFont("helvetica", "bold");
+                doc.text('⏰ Kdy došlo k oznámení:', 20, yPos);
+                doc.setFont("helvetica", "normal");
+                doc.text(formData.reportTime, 80, yPos);
+                yPos += 15;
+                
+                // Událost
+                doc.setFont("helvetica", "bold");
+                doc.text('📋 ÚDAJE O UDÁLOSTI', 20, yPos);
+                yPos += 8;
+                doc.setFont("helvetica", "normal");
+                doc.text('Datum události: ' + formData.incident.date, 20, yPos);
+                yPos += 6;
+                doc.text('Čas události: ' + formData.incident.time, 20, yPos);
+                yPos += 15;
+                
+                // Oznamovatel
+                doc.setFont("helvetica", "bold");
+                doc.text('👤 KDO UDÁLOST OZNÁMIL', 20, yPos);
+                yPos += 8;
+                doc.setFont("helvetica", "normal");
+                doc.text('Jméno: ' + formData.reporter.name, 20, yPos);
+                yPos += 6;
+                doc.text('Pozice: ' + formData.reporter.position, 20, yPos);
+                yPos += 6;
+                doc.text('Os. č.: ' + formData.reporter.employeeId, 20, yPos);
+                yPos += 6;
+                doc.text('Firma: ' + formData.reporter.company, 20, yPos);
+                yPos += 15;
+                
+                // Viník
+                doc.setFont("helvetica", "bold");
+                doc.text('⚠️ KDO UDÁLOST ZPŮSOBIL', 20, yPos);
+                yPos += 8;
+                doc.setFont("helvetica", "normal");
+                doc.text('Jméno: ' + formData.perpetrator.name, 20, yPos);
+                yPos += 6;
+                doc.text('Pozice: ' + formData.perpetrator.position, 20, yPos);
+                yPos += 6;
+                doc.text('Os. č.: ' + formData.perpetrator.employeeId, 20, yPos);
+                yPos += 6;
+                doc.text('Firma: ' + formData.perpetrator.company, 20, yPos);
+                yPos += 15;
+                
+                // Místo
+                doc.setFont("helvetica", "bold");
+                doc.text('📍 MÍSTO UDÁLOSTI', 20, yPos);
+                yPos += 8;
+                doc.setFont("helvetica", "normal");
+                doc.text('Adresa: ' + formData.location.address, 20, yPos);
+                yPos += 6;
+                doc.text('Přesné místo: ' + formData.location.detail, 20, yPos);
+                yPos += 15;
+                
+                // Nová stránka pokud je potřeba
+                if (yPos > 250) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                
+                // Poškození
+                doc.setFont("helvetica", "bold");
+                doc.text('💥 POŠKOZENÍ', 20, yPos);
+                yPos += 8;
+                doc.setFont("helvetica", "normal");
+                doc.text('Typ: ' + formData.damage.type, 20, yPos);
+                yPos += 6;
+                const damageLines = doc.splitTextToSize('Popis: ' + formData.damage.description, 170);
+                doc.text(damageLines, 20, yPos);
+                yPos += damageLines.length * 6 + 10;
+                
+                // Příčina
+                doc.setFont("helvetica", "bold");
+                doc.text('❓ PŘÍČINA UDÁLOSTI', 20, yPos);
+                yPos += 8;
+                doc.setFont("helvetica", "normal");
+                doc.text('Typ: ' + formData.cause.type, 20, yPos);
+                yPos += 6;
+                const causeLines = doc.splitTextToSize('Detailní popis: ' + formData.cause.detail, 170);
+                doc.text(causeLines, 20, yPos);
+                yPos += causeLines.length * 6 + 10;
+                
+                // Škoda
+                doc.setFont("helvetica", "bold");
+                doc.text('💰 ODHADOVANÁ ŠKODA', 20, yPos);
+                yPos += 8;
+                doc.setFont("helvetica", "normal");
+                doc.text(formData.estimatedDamage.amount + ' ' + formData.estimatedDamage.currency, 20, yPos);
+                yPos += 15;
+                
+                // Vyjádření viníka
+                if (formData.perpetratorStatement) {
+                    doc.setFont("helvetica", "bold");
+                    doc.text('💬 VYJÁDŘENÍ VINÍKA', 20, yPos);
+                    yPos += 8;
+                    doc.setFont("helvetica", "normal");
+                    const statementLines = doc.splitTextToSize(formData.perpetratorStatement, 170);
+                    doc.text(statementLines, 20, yPos);
+                    yPos += statementLines.length * 6 + 10;
+                }
+                
+                // Podpisy
+                doc.setFont("helvetica", "bold");
+                doc.text('✍️ PODPISY', 20, yPos);
+                yPos += 8;
+                doc.setFont("helvetica", "normal");
+                doc.text('Podpis viníka: ' + (formData.signatures.perpetrator && !formData.signatures.perpetrator.isEmpty ? 'Přítomen' : 'Chybí'), 20, yPos);
+                yPos += 6;
+                doc.text('Podpis vedoucího: ' + (formData.signatures.supervisor && !formData.signatures.supervisor.isEmpty ? 'Přítomen' : 'Chybí'), 20, yPos);
+                yPos += 10;
+                
+                // Metadata
+                doc.text('📸 Fotografie: ' + formData.photos.length + ' přiložených souborů', 20, yPos);
+                yPos += 6;
+                doc.text('📅 Vygenerováno: ' + new Date().toLocaleString('cs-CZ'), 20, yPos);
+                
+                // Získání PDF jako base64
+                const pdfBase64 = doc.output('datauristring').split(',')[1];
+                
+                // Vytvoření názvu souboru podle data události a jména viníka
+                const incidentDateParts = formData.incident.date.split('-'); // [YYYY, MM, DD]
+                const incidentDate = `${incidentDateParts[2]}.${incidentDateParts[1]}.${incidentDateParts[0]}`; // DD.MM.YYYY
+                const perpetratorName = formData.perpetrator.name
+                    .replace(/\s+/g, '_') // mezery na podtržítka
+                    .replace(/[^a-zA-Z0-9_čšžýáíéůúřťňď]/gi, '') // pouze povolené znaky
+                    .toLowerCase();
+                
+                const filename = `protokol_${incidentDate}_${perpetratorName}.pdf`;
+                
+                return {
+                    filename: filename,
+                    content: pdfBase64,
+                    mimeType: 'application/pdf'
+                };
+                
+            } catch (error) {
+                console.error('Chyba při generování PDF:', error);
+                throw new Error('Chyba při generování PDF: ' + error.message);
+            }
+        }
+
+        // Funkce pro odeslání PDF emailem přes Make
+        function sendPDFEmail(formData, pdfData) {
+            const webhookUrl = 'https://hook.eu2.make.com/xg110loy4xadvom33dxekme6jr8oxfjt';
+            
+            // Data pro email s PDF přílohou
+            const makeData = {
+                formId: formData.formId,
+                timestamp: formData.timestamp,
+                company: formData.company,
+                reportTime: formData.reportTime,
+                
+                // Email data
+                emailSubject: `Škodní protokol ${formData.formId} - ${formData.incident.date}`,
+                emailTo: 'david.rok@outlook.com',
+                emailBody: `
+Dobrý den,
+
+v příloze zasíláme škodní protokol s následujícími údaji:
+
+📋 ID protokolu: ${formData.formId}
+📅 Datum události: ${formData.incident.date} ${formData.incident.time}
+📍 Místo: ${formData.location.address}
+💥 Poškození: ${formData.damage.type}
+💰 Škoda: ${formData.estimatedDamage.amount} ${formData.estimatedDamage.currency}
+
+👤 Oznamovatel: ${formData.reporter.name} (${formData.reporter.position})
+⚠️ Viník: ${formData.perpetrator.name} (${formData.perpetrator.position})
+
+📄 Kompletní protokol najdete v příloze PDF.
+
+S pozdravem,
+Systém škodních protokolů Rohlik.cz
+                `,
+                
+                // PDF příloha
+                attachmentName: pdfData.filename,
+                attachmentContent: pdfData.content,
+                attachmentMimeType: 'application/pdf',
+                
+                // Metadata pro rozlišení
+                incidentDate: formData.incident.date,
+                incidentTime: formData.incident.time,
+                reporterName: formData.reporter.name,
+                perpetratorName: formData.perpetrator.name,
+                locationAddress: formData.location.address,
+                damageType: formData.damage.type,
+                estimatedAmount: formData.estimatedDamage.amount,
+                estimatedCurrency: formData.estimatedDamage.currency,
+                
+                // Flags pro Make
+                actionType: 'sendEmail',
+                hasPDFAttachment: true,
+                pdfSize: pdfData.content.length
+            };
+            
+            return fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(makeData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(`HTTP ${response.status}: ${text}`);
+                    });
+                }
+                return response.text().then(text => {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        return { success: true, response: text };
+                    }
+                });
+            });
+        }
+
+        // Vylepšené odeslání formuláře - PDF generování v prohlížeči
+        async function submitForm() {
             const submitBtn = document.querySelector('.submit-btn');
+            const container = document.querySelector('.container');
             
             // Kontrola povinných polí
             const requiredFields = [
@@ -1101,44 +1450,96 @@
             const perpetratorCanvas = document.getElementById('signature-perpetrator');
             const supervisorCanvas = document.getElementById('signature-supervisor');
             
-            function isCanvasEmpty(canvas) {
-                const ctx = canvas.getContext('2d');
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                return !imageData.data.some(channel => channel !== 0);
-            }
-            
             if (perpetratorCanvas && isCanvasEmpty(perpetratorCanvas)) {
                 isValid = false;
                 missingFields.push('✍️ Podpis viníka');
                 perpetratorCanvas.style.borderColor = '#e74c3c';
+                perpetratorCanvas.style.animation = 'shake 0.5s ease-in-out';
+            } else if (perpetratorCanvas) {
+                perpetratorCanvas.style.borderColor = '#ccc';
             }
             
             if (supervisorCanvas && isCanvasEmpty(supervisorCanvas)) {
                 isValid = false;
                 missingFields.push('✍️ Podpis security/vedoucího');
                 supervisorCanvas.style.borderColor = '#e74c3c';
+                supervisorCanvas.style.animation = 'shake 0.5s ease-in-out';
+            } else if (supervisorCanvas) {
+                supervisorCanvas.style.borderColor = '#ccc';
             }
             
             if (!isValid) {
                 alert('❌ Prosím vyplňte všechna povinná pole a podpisy:\n\n' + missingFields.join('\n'));
+                
+                // Scroll k prvnímu chybějícímu podpisu
+                if (perpetratorCanvas && isCanvasEmpty(perpetratorCanvas)) {
+                    perpetratorCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else if (supervisorCanvas && isCanvasEmpty(supervisorCanvas)) {
+                    supervisorCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                
                 return;
             }
             
-            // Simulace odesílání
+            // Animace načítání
             submitBtn.innerHTML = '⏳ Generuji PDF...';
             submitBtn.style.background = 'linear-gradient(135deg, #636e72 0%, #2d3436 100%)';
+            container.classList.add('loading');
             
-            setTimeout(() => {
+            try {
+                // Sběr dat z formuláře
+                const formData = collectFormData();
+                
+                // Generování PDF v prohlížeči
+                const pdfData = await generatePDFData(formData);
+                
+                submitBtn.innerHTML = '⏳ Odesílám PDF...';
+                
+                // Odeslání PDF emailem
+                const response = await sendPDFEmail(formData, pdfData);
+                
+                // Úspěšné odeslání
                 submitBtn.innerHTML = '✅ PDF odesláno!';
                 submitBtn.style.background = 'linear-gradient(135deg, #00b894 0%, #00a085 100%)';
+                container.classList.remove('loading');
+                container.classList.add('success-animation');
                 
-                alert('✅ Formulář byl úspěšně vyplněn!\n\n📝 V produkční verzi by byl vygenerován PDF protokol a odeslán emailem.\n\n🎯 Toto je demo verze pro testování formuláře.');
+                setTimeout(() => {
+                    alert('✅ PDF protokol byl úspěšně vygenerován a odeslán emailem!\n\n' +
+                          '📧 Email s PDF: ' + pdfData.filename + '\n' +
+                          '🆔 ID formuláře: ' + formData.formId);
+                    
+                    // Nabídka lokální kopie
+                    const saveLocal = confirm('💾 Chcete si také uložit lokální kopii PDF?');
+                    
+                    if (saveLocal) {
+                        // Spustí print dialog pro lokální uložení
+                        window.print();
+                    }
+                    
+                    // Reset tlačítka
+                    setTimeout(() => {
+                        submitBtn.innerHTML = '🚀 Odeslat škodní protokol';
+                        submitBtn.style.background = 'linear-gradient(135deg, #00c851 0%, #ff6900 100%)';
+                        container.classList.remove('success-animation');
+                    }, 3000);
+                }, 1000);
                 
+            } catch (error) {
+                // Chyba při generování nebo odesílání
+                submitBtn.innerHTML = '❌ Chyba při odesílání';
+                submitBtn.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
+                container.classList.remove('loading');
+                
+                alert('❌ Chyba při generování nebo odesílání PDF:\n' + error.message + 
+                      '\n\n💡 Zkuste to prosím znovu.');
+                
+                // Reset tlačítka po chybě
                 setTimeout(() => {
                     submitBtn.innerHTML = '🚀 Odeslat škodní protokol';
                     submitBtn.style.background = 'linear-gradient(135deg, #00c851 0%, #ff6900 100%)';
                 }, 3000);
-            }, 2000);
+            }
         }
 
         // CSS animace pro chybějící pole
