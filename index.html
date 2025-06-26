@@ -382,6 +382,25 @@
         formData.statement = document.getElementById('statement').value;
 
         console.log('Data uložena do formData:', formData);
+        // Odeslání dat do Make Webhooku
+        fetch("https://hook.eu2.make.com/bvo3fidax0nuczkds1zpdmq7fseb682x", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(formData)
+        })
+        .then(response => {
+          if (response.ok) {
+            console.log("✅ Data úspěšně odeslána do Make");
+          } else {
+            console.error("❌ Chyba při odesílání dat do Make:", response.status);
+          }
+        })
+        .catch(error => {
+          console.error("❌ Chyba při volání webhooku:", error);
+        });
+
 
         const formContainer = document.getElementById('form-container');
         console.log('Vykreslování html2canvas...');
