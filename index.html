@@ -101,6 +101,31 @@
       font-size: 1rem;
     }
   </style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+async function submitFormAndGeneratePDF(event) {
+  event.preventDefault();
+
+  const form = document.querySelector('form');
+  const formData = new FormData(form);
+  const data = {};
+  formData.forEach((value, key) => data[key] = value);
+
+  // Odešli data do Make
+  fetch("https://hook.eu2.make.com/bvo3fidax0nuczkds1zpdmq7fseb682x", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  }).catch(err => console.error("Make webhook error:", err));
+
+  // Vygeneruj PDF
+  const element = document.body;
+  html2pdf().from(element).save("zaznam-udalosti.pdf");
+}
+document.querySelector('form').addEventListener('submit', submitFormAndGeneratePDF);
+</script>
+
 </head>
 <body class="min-h-screen flex justify-center items-center p-4">
   <div id="form-container" class="max-w-4xl w-full bg-white p-8 rounded-xl shadow-2xl border border-gray-200">
@@ -382,25 +407,6 @@
         formData.statement = document.getElementById('statement').value;
 
         console.log('Data uložena do formData:', formData);
-        // Odeslání dat do Make Webhooku
-        fetch("https://hook.eu2.make.com/bvo3fidax0nuczkds1zpdmq7fseb682x", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(formData)
-        })
-        .then(response => {
-          if (response.ok) {
-            console.log("✅ Data úspěšně odeslána do Make");
-          } else {
-            console.error("❌ Chyba při odesílání dat do Make:", response.status);
-          }
-        })
-        .catch(error => {
-          console.error("❌ Chyba při volání webhooku:", error);
-        });
-
 
         const formContainer = document.getElementById('form-container');
         console.log('Vykreslování html2canvas...');
